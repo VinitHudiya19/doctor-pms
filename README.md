@@ -150,10 +150,10 @@ uvicorn main:app --reload
 👉 API Docs: http://localhost:8000/docs
 
 ## 2️⃣ Frontend Setup (React + Vite)
-Open a new terminal window for the frontend.
+### Open a new terminal window for the frontend.
 
-# Navigate to the frontend directory
-# (Adjust path based on your folder structure if needed)
+## Navigate to the frontend directory
+### (Adjust path based on your folder structure if needed)
 ``` bash
 cd ../frontend/doctorms
 ```
