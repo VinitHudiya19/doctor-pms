@@ -15,26 +15,6 @@ from schemas import (
 )
 import json
 import os
-from models import User
-from database import SessionLocal
-
-def seed_users():
-    db = SessionLocal()
-    try:
-        admin = db.query(User).filter(User.username == "admin").first()
-        doctor = db.query(User).filter(User.username == "doctor").first()
-
-        if not admin:
-            db.add(User(username="admin", password="admin123", role="ADMIN"))
-
-        if not doctor:
-            db.add(User(username="doctor", password="doctor123", role="DOCTOR"))
-
-        db.commit()
-    finally:
-        db.close()
-
-seed_users()
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -201,3 +181,16 @@ def get_reports(patient_id: int, db: Session = Depends(get_db)):
 
 # -------------------- FILE SERVE --------------------
 app.mount("/files", StaticFiles(directory="uploads"), name="files")
+
+from database import SessionLocal
+from models import User
+
+def seed_users():
+    db = SessionLocal()
+    if not db.query(User).first():
+        db.add(User(username="admin", password="admin123", role="ADMIN"))
+        db.add(User(username="doctor", password="doctor123", role="DOCTOR"))
+        db.commit()
+    db.close()
+
+seed_users()
