@@ -124,26 +124,27 @@ doctor-pms/
 ```bash
 git clone https://github.com/VinitHudiya19/doctor-pms.git
 cd doctor-pms
-
+``` 
 ## 🔧 Backend Setup (FastAPI)
 
 ### 2️⃣ Create Virtual Environment
 ```bash
 cd backend
 python -m venv venv
-
+```
 ### 3️⃣ Activate Virtual Environment
 ### Windows
 ```bash
 venv\Scripts\activate
-
+```
 ### 4️⃣ Install Dependencies
 ```bash
 pip install -r requirements.txt
-
+```
 ### 5️⃣ Run Backend Server
+```bash
 uvicorn main:app --reload
-
+```
 ✅ Backend will run at: 👉 http://localhost:8000
 
 👉 API Docs: http://localhost:8000/docs
@@ -153,14 +154,17 @@ Open a new terminal window for the frontend.
 
 # Navigate to the frontend directory
 # (Adjust path based on your folder structure if needed)
+``` bash
 cd ../frontend/doctorms
-
+```
 ### 6️⃣ Install Dependencies
+```bash
 npm install
-
+```
 ### 7️⃣ Start Frontend
+```bash
 npm run dev
-
+```
 ✅ Frontend will run at: 👉 http://localhost:5173
 
 
