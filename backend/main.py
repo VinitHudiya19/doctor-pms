@@ -15,16 +15,25 @@ from schemas import (
 )
 import json
 import os
+from fastapi.middleware.cors import CORSMiddleware
+import requests
+from pathlib import Path
+import json
+from fastapi import Depends, HTTPException
+from sqlalchemy.orm import Session
+from database import get_db
+from models import Patient, Prescription, Report
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-
+AI_MODEL_URL = "http://localhost:8001/api/v1/summarize"
+UPLOAD_DIR = Path("uploads")
 app = FastAPI()
 
-# -------------------- CORS --------------------
+# ✅ THEN add middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["*"],   # dev only
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -178,6 +187,83 @@ def get_reports(patient_id: int, db: Session = Depends(get_db)):
         .order_by(Report.created_at.desc())
         .all()
     )
+@app.post("/patient-summary/{patient_id}")
+def patient_summary(patient_id: int, db: Session = Depends(get_db)):
+
+    # ---------------- PATIENT ----------------
+    patient = db.query(Patient).filter(Patient.id == patient_id).first()
+
+    if not patient:
+        raise HTTPException(404, "Patient not found")
+
+    # ---------------- PRESCRIPTIONS ----------------
+    prescriptions = db.query(Prescription)\
+        .filter(Prescription.patient_id == patient_id).all()
+
+    prescription_text = ""
+
+    for p in prescriptions:
+        meds = json.loads(p.medicines)
+
+        med_lines = "\n".join([
+            f"- {m['name']} ({m['dosage']}, {m['frequency']}, {m['duration']})"
+            for m in meds
+        ])
+
+        prescription_text += f"""
+Doctor: {p.doctor_name}
+Diagnosis: {p.diagnosis}
+Medicines:
+{med_lines}
+Notes: {p.notes or "None"}
+"""
+
+    # ---------------- REPORT FILE TEXT ----------------
+    reports = db.query(Report)\
+        .filter(Report.patient_id == patient_id).all()
+
+    reports_text = ""
+
+    for r in reports:
+        file_path = UPLOAD_DIR / Path(r.file_path).name
+
+        if file_path.exists():
+            # simple fallback (filename info)
+            reports_text += f"\nReport File: {file_path.name}"
+
+    # ---------------- FINAL PROMPT ----------------
+    medical_text = f"""
+PATIENT PROFILE
+Name: {patient.name}
+Age: {patient.age}
+Gender: {patient.gender}
+
+PRESCRIPTIONS:
+{prescription_text}
+
+REPORTS:
+{reports_text}
+
+Generate clinical summary with observations and recommendations.
+"""
+
+    # ---------------- CALL AI MODEL SERVER ----------------
+    response = requests.post(
+        AI_MODEL_URL,
+        json={
+            "text": medical_text,
+            "max_length": 512,
+            "temperature": 0.6
+        },
+        timeout=120
+    )
+
+    if response.status_code != 200:
+        raise HTTPException(500, "AI model failed")
+
+    data = response.json()
+
+    return {"summary": data["summary"]}
 
 # -------------------- FILE SERVE --------------------
 app.mount("/files", StaticFiles(directory="uploads"), name="files")

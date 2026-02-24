@@ -28,22 +28,32 @@ export default function PatientDetails({ patient, user }: Props) {
   const [loadingAI, setLoadingAI] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
 
-  const generateSummary = () => {
-    setLoadingAI(true);
-    setAiSummary(null);
+  // ✅ CALL BACKEND (NOT MODEL DIRECTLY)
+  const generateSummary = async () => {
+    try {
+      setLoadingAI(true);
+      setAiSummary(null);
 
-    // 🔮 TEMP: simulate AI call (replace later with real API)
-    setTimeout(() => {
-      setAiSummary(
-        `Patient ${patient.name}, ${patient.age} years old (${patient.gender}).
-
-Recent medical activity includes prescriptions and reports recorded in the system.
-No critical alerts detected.
-
-Recommended: Continue current treatment and schedule follow-up if symptoms persist.`
+      const response = await fetch(
+        `http://localhost:8000/patient-summary/${patient.id}`,
+        {
+          method: "POST",
+        }
       );
+
+      if (!response.ok) {
+        throw new Error("Failed to generate summary");
+      }
+
+      const data = await response.json();
+
+      setAiSummary(data.summary);
+    } catch (err) {
+      console.error(err);
+      setAiSummary("Failed to generate AI summary.");
+    } finally {
       setLoadingAI(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -52,13 +62,29 @@ Recommended: Continue current treatment and schedule follow-up if symptoms persi
 
       {/* TABS */}
       <div className="tabs">
-        <TabButton label="Overview" active={activeTab === "OVERVIEW"} onClick={() => setActiveTab("OVERVIEW")} />
-        <TabButton label="Prescriptions" active={activeTab === "PRESCRIPTIONS"} onClick={() => setActiveTab("PRESCRIPTIONS")} />
-        <TabButton label="Reports" active={activeTab === "REPORTS"} onClick={() => setActiveTab("REPORTS")} />
-        <TabButton label="AI Summary" active={activeTab === "AI"} onClick={() => setActiveTab("AI")} />
+        <TabButton
+          label="Overview"
+          active={activeTab === "OVERVIEW"}
+          onClick={() => setActiveTab("OVERVIEW")}
+        />
+        <TabButton
+          label="Prescriptions"
+          active={activeTab === "PRESCRIPTIONS"}
+          onClick={() => setActiveTab("PRESCRIPTIONS")}
+        />
+        <TabButton
+          label="Reports"
+          active={activeTab === "REPORTS"}
+          onClick={() => setActiveTab("REPORTS")}
+        />
+        <TabButton
+          label="AI Summary"
+          active={activeTab === "AI"}
+          onClick={() => setActiveTab("AI")}
+        />
       </div>
 
-      {/* TAB CONTENT */}
+      {/* OVERVIEW */}
       {activeTab === "OVERVIEW" && (
         <div className="tab-content">
           <p><b>Name:</b> {patient.name}</p>
@@ -66,20 +92,24 @@ Recommended: Continue current treatment and schedule follow-up if symptoms persi
           <p><b>Gender:</b> {patient.gender}</p>
 
           {user.role !== "ADMIN" && (
-            <p className="muted-text">Only admin can edit patient details</p>
+            <p className="muted-text">
+              Only admin can edit patient details
+            </p>
           )}
         </div>
       )}
 
+      {/* PRESCRIPTIONS */}
       {activeTab === "PRESCRIPTIONS" && (
         <PrescriptionsTab patientId={patient.id} user={user} />
       )}
 
+      {/* REPORTS */}
       {activeTab === "REPORTS" && (
         <ReportsTab patientId={patient.id} user={user} />
       )}
 
-      {/* 🧠 AI SUMMARY TAB */}
+      {/* AI SUMMARY */}
       {activeTab === "AI" && (
         <div className="tab-content">
           <button
@@ -87,7 +117,9 @@ Recommended: Continue current treatment and schedule follow-up if symptoms persi
             onClick={generateSummary}
             disabled={loadingAI}
           >
-            {loadingAI ? "Generating Summary..." : "Generate AI Summary"}
+            {loadingAI
+              ? "Generating Summary..."
+              : "Generate AI Summary"}
           </button>
 
           {loadingAI && (
@@ -112,7 +144,7 @@ Recommended: Continue current treatment and schedule follow-up if symptoms persi
 function TabButton({
   label,
   active,
-  onClick
+  onClick,
 }: {
   label: string;
   active: boolean;
